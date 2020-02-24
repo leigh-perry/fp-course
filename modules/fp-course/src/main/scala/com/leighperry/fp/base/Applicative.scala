@@ -8,7 +8,10 @@ trait Applicative[F[_]] extends Functor[F] {
   //// Haskell-idiomatic <*>
 
   def ap[A, B](ff: F[A => B])(fa: F[A]): F[B] =
-    ???
+    map(product(ff, fa)) {
+      case (f, a) =>
+        f(a)
+    }
 
   //// lift functions
 
@@ -46,11 +49,14 @@ object Applicative {
       override def map[A, B](fa: Option[A])(f: A => B): Option[B] =
         Functor.instanceOption.map(fa)(f)
 
-      override def pure[A](x: A): Option[A] =
-        ???
+      override def pure[A](a: A): Option[A] =
+        Some(a)
 
       override def product[A, B](fa: Option[A], fb: Option[B]): Option[(A, B)] =
-        ???
+        (fa, fb) match {
+          case (Some(a), Some(b)) => Some((a, b))
+          case _ => None
+        }
     }
 
   implicit def instanceEither[E]: Applicative[Either[E, *]] =
@@ -58,11 +64,18 @@ object Applicative {
       override def map[A, B](fa: Either[E, A])(f: A => B): Either[E, B] =
         Functor.instanceEither.map(fa)(f)
 
-      override def pure[A](x: A): Either[E, A] =
-        ???
+      override def pure[A](a: A): Either[E, A] =
+        Right(a)
 
       override def product[A, B](fa: Either[E, A], fb: Either[E, B]): Either[E, (A, B)] =
-        ???
+        fa match {
+          case Left(ea) => Left(ea)
+          case Right(a) =>
+            fb match {
+              case Left(eb) => Left(eb)
+              case Right(b) => Right((a, b))
+            }
+        }
     }
 
   implicit val instanceList: Applicative[List] =
@@ -70,12 +83,15 @@ object Applicative {
       override def map[A, B](fa: List[A])(f: A => B): List[B] =
         Functor.instanceList.map(fa)(f)
 
-      override def pure[A](x: A): List[A] =
-        ???
+      override def pure[A](a: A): List[A] =
+        List(a)
 
       // cross-product
       override def product[A, B](fa: List[A], fb: List[B]): List[(A, B)] =
-        ???
+        fa.foldRight[List[(A, B)]](Nil) {
+          (a: A, l: List[(A, B)]) =>
+            fb.map(b => (a, b)) ++ l
+        }
     }
 
   implicit def instanceFunction1[X]: Applicative[X => *] =
@@ -83,10 +99,10 @@ object Applicative {
       override def map[A, B](fa: X => A)(f: A => B): X => B =
         Functor.instanceFunction1.map(fa)(f)
 
-      override def pure[A](x: A): X => A =
-        ???
+      override def pure[A](a: A): X => A =
+        _ => a
 
       override def product[A, B](fa: X => A, fb: X => B): X => (A, B) =
-        ???
+        x => (fa(x), fb(x))
     }
 }

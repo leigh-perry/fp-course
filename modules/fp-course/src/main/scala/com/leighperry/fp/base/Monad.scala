@@ -4,7 +4,7 @@ trait Monad[F[_]] extends Applicative[F] {
   def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B]
 
   def flatten[A](ffa: F[F[A]]): F[A] =
-    ???
+    flatMap(ffa)(identity)
 }
 
 object Monad {
@@ -14,7 +14,12 @@ object Monad {
   implicit val instanceOption: Monad[Option] =
     new Monad[Option] {
       override def flatMap[A, B](fa: Option[A])(f: A => Option[B]): Option[B] =
-        ???
+        fa match {
+          case Some(a) =>
+            f(a)
+          case None =>
+            None
+        }
 
       override def pure[A](a: A): Option[A] =
         Applicative.instanceOption.pure(a)
@@ -29,7 +34,12 @@ object Monad {
   implicit def instanceEither[E]: Monad[Either[E, *]] =
     new Monad[Either[E, *]] {
       override def flatMap[A, B](fa: Either[E, A])(f: A => Either[E, B]): Either[E, B] =
-        ???
+        fa match {
+          case Left(e) =>
+            Left(e)
+          case Right(a) =>
+            f(a)
+        }
 
       override def pure[A](a: A): Either[E, A] =
         Applicative.instanceEither.pure(a)
@@ -44,7 +54,10 @@ object Monad {
   implicit val instanceList: Monad[List] =
     new Monad[List] {
       override def flatMap[A, B](fa: List[A])(f: A => List[B]): List[B] =
-        ???
+        fa.foldRight[List[B]](Nil) {
+          (a: A, l: List[B]) =>
+            f(a) ++ l
+        }
 
       override def pure[A](a: A): List[A] =
         Applicative.instanceList.pure(a)
@@ -60,7 +73,7 @@ object Monad {
     new Monad[X => *] {
       // Dependency injection :-)
       override def flatMap[A, B](fa: X => A)(f: A => X => B): X => B =
-        ???
+        x => f(fa(x))(x)
 
       override def pure[A](a: A): X => A =
         Applicative.instanceFunction1.pure(a)

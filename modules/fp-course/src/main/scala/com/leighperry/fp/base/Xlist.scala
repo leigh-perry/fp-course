@@ -41,18 +41,26 @@ object Xlist {
   }
 
   def product(xl: Xlist[Int]): Int =
-    ???
+    xl.foldLeft[Int](_ * _, 1)
 
   def sum(xl: Xlist[Int]): Int =
-    ???
+    xl.foldLeft[Int](_ + _, 0)
 
   def flatten[A](xl: Xlist[Xlist[A]]): Xlist[A] =
-    ???
+    xl.foldRight[Xlist[A]](_ ++ _, Xnil)
 
   // if any option in the list is None, result is None
   // otherwise result is Some(List(...values...))
   def sequenceOptional[A](xl: Xlist[Option[A]]): Option[Xlist[A]] =
-    ???
+    xl.foldRight[Option[Xlist[A]]](
+      (optA, optList) =>
+        //optList.flatMap(list => optA.map[Xlist[A]](_ ::: list))
+        for {
+          list <- optList
+          o <- optA
+        } yield o ::: list,
+      Some(Xnil)
+    )
 
   //// syntax
 
@@ -85,31 +93,47 @@ object Xlist {
 
     // Naive implementation is not tail recursive
     def foldRight[B](f: (A, B) => B, init: B): B =
-      ???
+      xl match {
+        case Xnil =>
+          init
+
+        case head ::: tail =>
+          f(head, tail.foldRight(f, init))
+      }
 
     def headOr(a: A): A =
-      ???
+      foldRight[A]((aa, _) => aa, a)
 
     def length: Int =
-      ???
+      foldLeft[Int]((b, _) => b + 1, 0)
 
     def map[B](f: A => B): Xlist[B] =
-      ???
+      foldRight[Xlist[B]]((a, b) => f(a) ::: b, Xnil)
 
     def filter(predicate: A => Boolean): Xlist[A] =
-      ???
+      foldRight[Xlist[A]]((a, b) => if (predicate(a)) a ::: b else b, Xnil)
 
     def ++(other: Xlist[A]): Xlist[A] =
-      ???
+      foldRight[Xlist[A]]((a, b) => a ::: b, other)
 
     def flatMap[B](f: A => Xlist[B]): Xlist[B] =
-      ???
+      foldRight[Xlist[B]](
+        (a, b) => f(a) ++ b,
+        Xnil
+      )
 
     def find(predicate: A => Boolean): Option[A] =
-      ???
+      foldLeft[Option[A]](
+        (optA, a) =>
+          optA match {
+            case Some(_) => optA
+            case None => Some(a).filter(predicate)
+          },
+        None
+      )
 
     def reverse: Xlist[A] =
-      ???
+      foldLeft[Xlist[A]]((l, a) => a ::: l, Xnil)
   }
 
 }
