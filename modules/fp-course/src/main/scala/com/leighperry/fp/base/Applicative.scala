@@ -106,3 +106,45 @@ object Applicative {
         x => (fa(x), fb(x))
     }
 }
+
+////
+
+object ApplicativeSyntax {
+  implicit class ApplicativeOpsF[F[_]: Applicative, A](fa: F[A]) {
+    def product[B](fb: F[B]): F[(A, B)] =
+      Applicative[F].product(fa, fb)
+
+    def ap[B](ff: F[A => B]): F[B] =
+      Applicative[F].ap(ff)(fa)
+
+    def <*[B, Z](fb: F[B]): F[A] =
+      Applicative[F].map2(fa, fb) {
+        (a, _) =>
+          a
+      }
+
+    def *>[B, Z](fb: F[B]): F[B] =
+      Applicative[F].map2(fa, fb) {
+        (_, b) =>
+          b
+      }
+
+    def map2[B, Z](fb: F[B])(f: (A, B) => Z): F[Z] =
+      Applicative[F].map2(fa, fb)(f)
+
+    def map3[A1, A2, Z](f1: F[A1], f2: F[A2])(f: (A, A1, A2) => Z): F[Z] =
+      Applicative[F].map3(fa, f1, f2)(f)
+
+    def map4[A1, A2, A3, Z](f1: F[A1], f2: F[A2], f3: F[A3])(f: (A, A1, A2, A3) => Z): F[Z] =
+      Applicative[F].map4(fa, f1, f2, f3)(f)
+
+    def map5[A1, A2, A3, A4, Z](f1: F[A1], f2: F[A2], f3: F[A3], f4: F[A4])(f: (A, A1, A2, A3, A4) => Z): F[Z] =
+      Applicative[F].map5(fa, f1, f2, f3, f4: F[A4])(f)
+
+  }
+
+  implicit class ApplicativeOpsA[A](a: A) {
+    def pure[F[_]: Applicative]: F[A] =
+      Applicative[F].pure(a)
+  }
+}
