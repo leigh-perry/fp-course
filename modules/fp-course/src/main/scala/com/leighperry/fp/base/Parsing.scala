@@ -250,7 +250,7 @@ object Parsing {
   //   * The input is empty
   //   * The produced character is not a digit
   //
-  // /Tip:/ Use the @satisfy@ and @Data.Char#isDigit@ functions
+  // /Tip:/ Use the @satisfy@ and @Char#isDigit@ functions
   //----
   // def main(args: Array[String]): Unit = {
   //   assert(Result(Xlist(),'9') == parse (digit ,slist ("9")))
@@ -302,7 +302,7 @@ object Parsing {
   // }
   //----
 
-  // Return a parser that continues producing a list of values from the given parser.
+  // Return a parser that continues producing a list of values from the given parser
   //----
   // def main(args: Array[String]): Unit = {
   //   assert(Result(Xnil, Xnil) == parse(list(character), Xnil))
@@ -322,7 +322,7 @@ object Parsing {
     } ||| (Xnil: Xlist[A]).pure[Parser]
 
   // Return a parser that produces at least one value from the given parser then
-  // continues producing a list of values from the given parser (to ultimately produce a non-empty list).
+  // continues producing a list of values from the given parser (to ultimately produce a non-empty list)
   //----
   // def main(args: Array[String]): Unit = {
   //   assert(Result(Xnil, Xlist('a', 'b', 'c')) == parse(list1(character), slist("abc")))
@@ -334,4 +334,307 @@ object Parsing {
   def list1[A](p: Parser[A]): Parser[Xlist[A]] =
     p <:> list(p)
 
+  // Return a parser that produces one or more space characters
+  // (consuming until the first non-space) but fails if
+  //
+  //   * The input is empty
+  //
+  //   * The first produced character is not a space
+  //
+  // /Tip:/ Use the @list1@ and @space@ functions.
+  val spaces1: Parser[Chars] =
+    list1(space)
+
+  // Return a parser that produces a lower-case character but fails if
+  //   * The input is empty
+  //   * The produced character is not lower-case
+  //
+  // /Tip:/ Use the @satisfy@ and @Char#isLower@ functions.
+  val lower: Parser[Char] =
+    satisfy(_.isLower)
+
+  // Return a parser that produces an upper-case character but fails if
+  //   * The input is empty
+  //   * The produced character is not upper-case
+  //
+  // /Tip:/ Use the @satisfy@ and @Char#isUpper@ functions.
+  val upper: Parser[Char] =
+    satisfy(_.isUpper)
+
+  // Return a parser that produces an alpha character but fails if
+  //
+  //   * The input is empty
+  //
+  //   * The produced character is not alpha
+  //
+  // /Tip:/ Use the @satisfy@ and @Char#isLetterOrDigit@ functions.
+  val alpha: Parser[Char] =
+    satisfy(_.isLetterOrDigit)
+
+  // Return a parser that sequences the given list of parsers by producing all their results
+  // but fails on the first failing parser of the list
+  //
+  // /Tip:/ Optionally use @Xlist#foldRight@. If not, an explicit recursive call
+  //----
+  // def main(args: Array[String]): Unit = {
+  //   assert(
+  //     Result(Xlist('d', 'e', 'f'), Xlist('a', 'x', 'C')) ==
+  //       parse(sequenceParser(Xlist(character, is('x'), upper)), slist("axCdef"))
+  //   )
+  //   assert(isErrorResult(parse(sequenceParser(Xlist(character, is('x'), upper)), slist("abCdef"))))
+  // }
+  //----
+  def sequenceParser[A](l: Xlist[Parser[A]]): Parser[Xlist[A]] =
+    l.foldRight[Parser[Xlist[A]]](
+      (p: Parser[A], b: Parser[Xlist[A]]) =>
+        p.map2(b) {
+          (a: A, as: Xlist[A]) =>
+            a ::: as
+        },
+      valueParser(Xnil)
+    )
+
+  // Return a parser that produces the given number of values off the given parser
+  // This parser fails if the given parser fails in the attempt to produce the given number of values
+  //
+  // /Tip:/ Use @sequenceParser@ and @xlist.replicate@
+  //----
+  // def main(args: Array[String]): Unit = {
+  //   assert(Result(Xlist('e', 'f'), Xlist('A', 'B', 'C', 'D')) == parse(thisMany(4, upper), slist("ABCDef")))
+  //   assert(isErrorResult(parse(thisMany(4, upper), slist("ABcDef"))))
+  // }
+  //----
+  def thisMany[A](n: Int, p: Parser[A]): Parser[Xlist[A]] =
+    sequenceParser(Xlist.replicate(n, p))
+
+  // This one is done for you
+  //
+  // /Age: positive integer/
+  //
+  // def main(args: Array[String]): Unit = {
+  //   assert(UnexpectedEof == parse(ageParser, slist("")))
+  //   assert(Result(Xlist('x'), 1) == parse(ageParser, slist("1x")))
+  //   assert(Result(Xlist('x'), 120) == parse(ageParser, slist("120x")))
+  //   assert(UnexpectedChar('x') == parse(ageParser, slist("x120")))
+  // }
+
+  // Result >< 120
+  //
+  // >>> isErrorResult (parse ageParser "abc")
+  // True
+  //
+  // >>> isErrorResult (parse ageParser "-120")
+  // True
+  val ageParser: Parser[Int] =
+    list1(digit).map {
+      digits: Xlist[Char] =>
+        digits.foldLeft[String](_ + _, "").toInt
+    }
+
+  // Write a parser for Person.firstName
+  // /First Name: non-empty string that starts with a capital letter and is followed
+  // by zero or more lower-case letters/
+  //----
+  // def main(args: Array[String]): Unit = {
+  //   assert(Result(Xlist(), Xlist('A', 'b', 'c')) == parse(firstNameParser, slist("Abc")))
+  //   assert(isErrorResult(parse(firstNameParser, slist("abc"))))
+  // }
+  //----
+  val firstNameParser: Parser[Chars] =
+    upper <:> list(lower)
+
+  // Write a parser for Person.surname
+  //
+  // /Surname: string that starts with a capital letter and is followed by 5 or more lower-case letters./
+  //
+  // /Tip:/ Use @flatMap@, @pure@, @upper@, @thisMany@, @lower@ and @list@
+  //----
+  // def main(args: Array[String]): Unit = {
+  //   assert(Result(Xlist(), Xlist('A', 'b', 'c', 'd', 'e', 'f')) == parse(surnameParser, slist("Abcdef")))
+  //   assert(
+  //     Result(Xlist(), Xlist('A', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l')) ==
+  //       parse(surnameParser, slist("Abcdefghijkl"))
+  //   )
+  //   assert(isErrorResult((parse(surnameParser, slist("Abc")))))
+  //   assert(isErrorResult((parse(surnameParser, slist("abc")))))
+  // }
+  //----
+  def nOrMore[A](n: Int, p: Parser[A]): Parser[Xlist[A]] =
+    thisMany(5, p)
+      .map2(list(p)) {
+        _ ++ _
+      }
+
+  val surnameParser: Parser[Chars] =
+    upper <:> nOrMore(5, lower)
+
+  /*
+
+  // Write a parser for Person.smoker
+  //
+  // /Smoker: character that must be @'y'@ or @'n'@/
+  //
+  // /Tip:/ Use @is@ and @(|||)@./
+  //
+  // >>> parse smokerParser "yabc"
+  // Result >abc< True
+  //
+  // >>> parse smokerParser "nabc"
+  // Result >abc< False
+  //
+  // >>> isErrorResult (parse smokerParser "abc")
+  // True
+  smokerParser ::
+    Parser Bool
+  //smokerParser = (== 'y') <$> ((is 'y') ||| (is 'n'))
+  smokerParser = True <$ is 'y' ||| False <$ is 'n'
+
+
+  // Write part of a parser for Person#phoneBody
+  // This parser will only produce a string of digits, dots or hyphens
+  // It will ignore the overall requirement of a phone number to
+  // start with a digit and end with a hash (#)
+  //
+  // /Phone: string of digits, dots or hyphens .../
+  //
+  // /Tip:/ Use @list@, @digit@, @(|||)@ and @is@
+  //
+  // >>> parse phoneBodyParser "123-456"
+  // Result >< "123-456"
+  //
+  // >>> parse phoneBodyParser "123-4a56"
+  // Result >a56< "123-4"
+  //
+  // >>> parse phoneBodyParser "a123-456"
+  // Result >a123-456< ""
+  phoneBodyParser ::
+    Parser Chars
+  phoneBodyParser = list1 (is '.' ||| is '-' ||| digit)
+
+
+  // Write a parser for Person.phone
+  //
+  // /Phone: ... but must start with a digit and end with a hash (#)./
+  //
+  // /Tip:/ Use @flatMap@, @pure@, @digit@, @phoneBodyParser@ and @is@
+  //
+  // >>> parse phoneParser "123-456#"
+  // Result >< "123-456"
+  //
+  // >>> parse phoneParser "123-456#abc"
+  // Result >abc< "123-456"
+  //
+  // >>> isErrorResult (parse phoneParser "123-456")
+  // True
+  //
+  // >>> isErrorResult (parse phoneParser "a123-456")
+  // True
+  phoneParser ::
+    Parser Chars
+  phoneParser =
+    (:.) <$> digit <*> phoneBodyParser <* is '#'
+
+  // Write a parser for Person
+  //
+  // /Tip:/ Use @(>>=)@,
+  //            @pure@,
+  //            @(*>)@,
+  //            @spaces1@,
+  //            @ageParser@,
+  //            @firstNameParser@,
+  //            @surnameParser@,
+  //            @smokerParser@,
+  //            @phoneParser@
+  //
+  // /Tip:/ Follow-on exercise: Use *(<*>)* instead of @(>>=)@
+  //
+  // /Tip:/ Follow-on exercise: Use *(<*>~)* instead of @(<*>)@ and @(*>)@
+  //
+  // >>> isErrorResult (parse personParser "")
+  // True
+  //
+  // >>> isErrorResult (parse personParser "12x Fred Clarkson y 123-456.789#")
+  // True
+  //
+  // >>> isErrorResult (parse personParser "123 fred Clarkson y 123-456.789#")
+  // True
+  //
+  // >>> isErrorResult (parse personParser "123 Fred Cla y 123-456.789#")
+  // True
+  //
+  // >>> isErrorResult (parse personParser "123 Fred clarkson y 123-456.789#")
+  // True
+  //
+  // >>> isErrorResult (parse personParser "123 Fred Clarkson x 123-456.789#")
+  // True
+  //
+  // >>> isErrorResult (parse personParser "123 Fred Clarkson y 1x3-456.789#")
+  // True
+  //
+  // >>> isErrorResult (parse personParser "123 Fred Clarkson y -123-456.789#")
+  // True
+  //
+  // >>> isErrorResult (parse personParser "123 Fred Clarkson y 123-456.789")
+  // True
+  //
+  // >>> parse personParser "123 Fred Clarkson y 123-456.789#"
+  // Result >< Person 123 "Fred" "Clarkson" True "123-456.789"
+
+  //
+  // >>> parse personParser "123 Fred Clarkson y 123-456.789# rest"
+  // Result > rest< Person 123 "Fred" "Clarkson" True "123-456.789"
+
+  //
+  // >>> parse personParser "123  Fred   Clarkson    y     123-456.789#"
+  // Result >< Person 123 "Fred" "Clarkson" True "123-456.789"
+  personParser ::
+    Parser Person
+  personParser =
+    Person <$> ageParser <* spaces1 <*> firstNameParser <* spaces1 <*> surnameParser <* spaces1 <*> smokerParser <* spaces1 <*> phoneParser
+
+  // TODO see file MoreParser.hs then JsonValue.hs
+
+  // -- Suppose we have a data structure to represent a person. The person data structure has these attributes:
+  // --     * Age: positive integer
+  // --     * First Name: non-empty string that starts with a capital letter and is followed by zero or more lower-case letters
+  // --     * Surname: string that starts with a capital letter and is followed by 5 or more lower-case letters
+  // --     * Smoker: character that must be 'y' or 'n' that maps to a boolean
+  // --     * Phone: string of digits, dots or hyphens but must start with a digit and end with a hash (#)
+  // data Person =
+  //   Person
+  //     Int   -- age
+  //     Chars -- first name
+  //     Chars -- surname
+  //     Bool  -- smoker
+  //     Chars -- phone number
+  //   deriving (Eq, Show)
+
+
+  // Make sure all the tests pass!
+
+  //--
+
+  // Did you repeat yourself in `personParser` ? This might help:
+
+  (>>=~) ::
+    Parser a
+    -> (a -> Parser b)
+    -> Parser b
+  (>>=~) p f =
+    (p <* spaces1) >>= f
+
+  infixl 1 >>=~
+
+  // or maybe this
+
+  (<*>~) ::
+    Parser (a -> b)
+    -> Parser a
+    -> Parser b
+  (<*>~) f a =
+    f <*> spaces1 *> a
+
+  infixl 4 <*>~
+
+ */
 }

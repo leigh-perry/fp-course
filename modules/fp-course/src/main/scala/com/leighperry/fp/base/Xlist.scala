@@ -62,6 +62,13 @@ object Xlist {
       Some(Xnil)
     )
 
+  def replicate[A](n: Int, a: A): Xlist[A] =
+    fromList {
+      (1 to n)
+        .map(_ => a)
+        .toList
+    }
+
   //// syntax
 
   implicit class XlistOps[A](val xl: Xlist[A]) extends AnyVal {
