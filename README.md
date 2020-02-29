@@ -1,17 +1,16 @@
 # Scala FP info
 
-## Standard effect typeclasses
+Scala port of Data61's Haskell FP course, plus some other stuff.
 
-### Prerequisite
+## Prerequisite
 
-We implement `Xlist` – a standard linked list ("cons list"), 
-and `Optional` – a standard `Option`.
+We implement `Xlist` – a standard linked list ("cons list").
 
 - Implement [operations for Xlist](./modules/fp-course/src/main/scala/com/leighperry/fp/base/Xlist.scala)
 by replacing the `???` sections, and then
 run [the tests](./modules/fp-course/src/test/scala/com/leighperry/fp/base/XlistSpec.scala).
 
-These will let us implement our own versions of the standard effect typeclasses for them.
+These will let us implement our own versions of the standard effect typeclasses for it.
 
 ### Functor
 
@@ -33,12 +32,7 @@ by replacing the `???` sections, and then
 run [the tests](./modules/fp-course/src/test/scala/com/leighperry/fp/base/ApplicativeSpec.scala).
 
 
-
 ## Implement a parser
-
-### FileIO
-
-[COMING]
 
 ### Parser
 
