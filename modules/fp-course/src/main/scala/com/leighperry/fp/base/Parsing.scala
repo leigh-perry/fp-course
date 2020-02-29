@@ -468,27 +468,18 @@ object Parsing {
   val surnameParser: Parser[Chars] =
     upper <:> nOrMore(5, lower)
 
-  /*
-
   // Write a parser for Person.smoker
-  //
   // /Smoker: character that must be @'y'@ or @'n'@/
-  //
   // /Tip:/ Use @is@ and @(|||)@./
-  //
-  // >>> parse smokerParser "yabc"
-  // Result >abc< True
-  //
-  // >>> parse smokerParser "nabc"
-  // Result >abc< False
-  //
-  // >>> isErrorResult (parse smokerParser "abc")
-  // True
-  smokerParser ::
-    Parser Bool
-  //smokerParser = (== 'y') <$> ((is 'y') ||| (is 'n'))
-  smokerParser = True <$ is 'y' ||| False <$ is 'n'
-
+  //----
+  // def main(args: Array[String]): Unit = {
+  //   assert(Result(Xlist('a', 'b', 'c'), true) == parse(smokerParser, slist("yabc")))
+  //   assert(Result(Xlist('a', 'b', 'c'), false) == parse(smokerParser, slist("nabc")))
+  //   assert(isErrorResult(parse(smokerParser, slist("abc"))))
+  // }
+  //----
+  val smokerParser: Parser[Boolean] =
+    is('y').map(_ => true) ||| is('n').map(_ => false)
 
   // Write part of a parser for Person#phoneBody
   // This parser will only produce a string of digits, dots or hyphens
@@ -498,143 +489,156 @@ object Parsing {
   // /Phone: string of digits, dots or hyphens .../
   //
   // /Tip:/ Use @list@, @digit@, @(|||)@ and @is@
-  //
-  // >>> parse phoneBodyParser "123-456"
-  // Result >< "123-456"
-  //
-  // >>> parse phoneBodyParser "123-4a56"
-  // Result >a56< "123-4"
-  //
+  //----
+  // def main(args: Array[String]): Unit = {
+  //   assert(Result(Xlist(), Xlist('1', '2', '3', '-', '4', '5', '6')) == parse(phoneBodyParser, slist("123-456")))
+  //   assert(Result(Xlist('a', '5', '6'), Xlist('1', '2', '3', '-', '4')) == parse(phoneBodyParser, slist("123-4a56")))
+  //   assert(Result(Xlist('a', '1', '2', '3', '-', '4', '5', '6'), Xlist()) == parse(phoneBodyParser, slist("a123-456")))
+  // }
   // >>> parse phoneBodyParser "a123-456"
   // Result >a123-456< ""
-  phoneBodyParser ::
-    Parser Chars
-  phoneBodyParser = list1 (is '.' ||| is '-' ||| digit)
-
+  //----
+  val phoneBodyParser: Parser[Chars] =
+    list(digit ||| is('.') ||| is('-'))
 
   // Write a parser for Person.phone
-  //
   // /Phone: ... but must start with a digit and end with a hash (#)./
-  //
   // /Tip:/ Use @flatMap@, @pure@, @digit@, @phoneBodyParser@ and @is@
-  //
-  // >>> parse phoneParser "123-456#"
-  // Result >< "123-456"
-  //
-  // >>> parse phoneParser "123-456#abc"
-  // Result >abc< "123-456"
-  //
-  // >>> isErrorResult (parse phoneParser "123-456")
-  // True
-  //
-  // >>> isErrorResult (parse phoneParser "a123-456")
-  // True
-  phoneParser ::
-    Parser Chars
-  phoneParser =
-    (:.) <$> digit <*> phoneBodyParser <* is '#'
+  //----
+  def main(args: Array[String]): Unit = {
+    assert(Result(Xlist(), Xlist('1', '2', '3', '-', '4', '5', '6')) == parse(phoneParser, slist("123-456#")))
+    assert(
+      Result(Xlist('a', 'b', 'c'), Xlist('1', '2', '3', '-', '4', '5', '6')) ==
+        parse(phoneParser, slist("123-456#abc"))
+    )
+    assert(isErrorResult(parse(phoneParser, slist("a123-456"))))
+  }
+  //----
+  val phoneParser: Parser[Chars] =
+    for {
+      d <- digit
+      pb <- phoneBodyParser
+      _ <- is('#')
+    } yield d ::: pb
 
-  // Write a parser for Person
-  //
-  // /Tip:/ Use @(>>=)@,
-  //            @pure@,
-  //            @(*>)@,
-  //            @spaces1@,
-  //            @ageParser@,
-  //            @firstNameParser@,
-  //            @surnameParser@,
-  //            @smokerParser@,
-  //            @phoneParser@
-  //
-  // /Tip:/ Follow-on exercise: Use *(<*>)* instead of @(>>=)@
-  //
-  // /Tip:/ Follow-on exercise: Use *(<*>~)* instead of @(<*>)@ and @(*>)@
-  //
-  // >>> isErrorResult (parse personParser "")
-  // True
-  //
-  // >>> isErrorResult (parse personParser "12x Fred Clarkson y 123-456.789#")
-  // True
-  //
-  // >>> isErrorResult (parse personParser "123 fred Clarkson y 123-456.789#")
-  // True
-  //
-  // >>> isErrorResult (parse personParser "123 Fred Cla y 123-456.789#")
-  // True
-  //
-  // >>> isErrorResult (parse personParser "123 Fred clarkson y 123-456.789#")
-  // True
-  //
-  // >>> isErrorResult (parse personParser "123 Fred Clarkson x 123-456.789#")
-  // True
-  //
-  // >>> isErrorResult (parse personParser "123 Fred Clarkson y 1x3-456.789#")
-  // True
-  //
-  // >>> isErrorResult (parse personParser "123 Fred Clarkson y -123-456.789#")
-  // True
-  //
-  // >>> isErrorResult (parse personParser "123 Fred Clarkson y 123-456.789")
-  // True
-  //
-  // >>> parse personParser "123 Fred Clarkson y 123-456.789#"
-  // Result >< Person 123 "Fred" "Clarkson" True "123-456.789"
-
-  //
-  // >>> parse personParser "123 Fred Clarkson y 123-456.789# rest"
-  // Result > rest< Person 123 "Fred" "Clarkson" True "123-456.789"
-
-  //
-  // >>> parse personParser "123  Fred   Clarkson    y     123-456.789#"
-  // Result >< Person 123 "Fred" "Clarkson" True "123-456.789"
-  personParser ::
-    Parser Person
-  personParser =
-    Person <$> ageParser <* spaces1 <*> firstNameParser <* spaces1 <*> surnameParser <* spaces1 <*> smokerParser <* spaces1 <*> phoneParser
-
-  // TODO see file MoreParser.hs then JsonValue.hs
-
-  // -- Suppose we have a data structure to represent a person. The person data structure has these attributes:
-  // --     * Age: positive integer
-  // --     * First Name: non-empty string that starts with a capital letter and is followed by zero or more lower-case letters
-  // --     * Surname: string that starts with a capital letter and is followed by 5 or more lower-case letters
-  // --     * Smoker: character that must be 'y' or 'n' that maps to a boolean
-  // --     * Phone: string of digits, dots or hyphens but must start with a digit and end with a hash (#)
-  // data Person =
-  //   Person
-  //     Int   -- age
-  //     Chars -- first name
-  //     Chars -- surname
-  //     Bool  -- smoker
-  //     Chars -- phone number
-  //   deriving (Eq, Show)
+  /*
 
 
-  // Make sure all the tests pass!
 
-  //--
 
-  // Did you repeat yourself in `personParser` ? This might help:
 
-  (>>=~) ::
-    Parser a
-    -> (a -> Parser b)
-    -> Parser b
-  (>>=~) p f =
-    (p <* spaces1) >>= f
 
-  infixl 1 >>=~
 
-  // or maybe this
 
-  (<*>~) ::
-    Parser (a -> b)
-    -> Parser a
-    -> Parser b
-  (<*>~) f a =
-    f <*> spaces1 *> a
 
-  infixl 4 <*>~
+
+
+
+
+phoneParser =
+(:.) <$> digit <*> phoneBodyParser <* is '#'
+
+// Write a parser for Person
+//
+// /Tip:/ Use @(>>=)@,
+//            @pure@,
+//            @(*>)@,
+//            @spaces1@,
+//            @ageParser@,
+//            @firstNameParser@,
+//            @surnameParser@,
+//            @smokerParser@,
+//            @phoneParser@
+//
+// /Tip:/ Follow-on exercise: Use *(<*>)* instead of @(>>=)@
+//
+// /Tip:/ Follow-on exercise: Use *(<*>~)* instead of @(<*>)@ and @(*>)@
+//
+// >>> isErrorResult (parse personParser "")
+// True
+//
+// >>> isErrorResult (parse personParser "12x Fred Clarkson y 123-456.789#")
+// True
+//
+// >>> isErrorResult (parse personParser "123 fred Clarkson y 123-456.789#")
+// True
+//
+// >>> isErrorResult (parse personParser "123 Fred Cla y 123-456.789#")
+// True
+//
+// >>> isErrorResult (parse personParser "123 Fred clarkson y 123-456.789#")
+// True
+//
+// >>> isErrorResult (parse personParser "123 Fred Clarkson x 123-456.789#")
+// True
+//
+// >>> isErrorResult (parse personParser "123 Fred Clarkson y 1x3-456.789#")
+// True
+//
+// >>> isErrorResult (parse personParser "123 Fred Clarkson y -123-456.789#")
+// True
+//
+// >>> isErrorResult (parse personParser "123 Fred Clarkson y 123-456.789")
+// True
+//
+// >>> parse personParser "123 Fred Clarkson y 123-456.789#"
+// Result >< Person 123 "Fred" "Clarkson" True "123-456.789"
+
+//
+// >>> parse personParser "123 Fred Clarkson y 123-456.789# rest"
+// Result > rest< Person 123 "Fred" "Clarkson" True "123-456.789"
+
+//
+// >>> parse personParser "123  Fred   Clarkson    y     123-456.789#"
+// Result >< Person 123 "Fred" "Clarkson" True "123-456.789"
+personParser ::
+Parser Person
+personParser =
+Person <$> ageParser <* spaces1 <*> firstNameParser <* spaces1 <*> surnameParser <* spaces1 <*> smokerParser <* spaces1 <*> phoneParser
+
+// TODO see file MoreParser.hs then JsonValue.hs
+
+// -- Suppose we have a data structure to represent a person. The person data structure has these attributes:
+// --     * Age: positive integer
+// --     * First Name: non-empty string that starts with a capital letter and is followed by zero or more lower-case letters
+// --     * Surname: string that starts with a capital letter and is followed by 5 or more lower-case letters
+// --     * Smoker: character that must be 'y' or 'n' that maps to a boolean
+// --     * Phone: string of digits, dots or hyphens but must start with a digit and end with a hash (#)
+// data Person =
+//   Person
+//     Int   -- age
+//     Chars -- first name
+//     Chars -- surname
+//     Bool  -- smoker
+//     Chars -- phone number
+//   deriving (Eq, Show)
+
+
+// Make sure all the tests pass!
+
+//--
+
+// Did you repeat yourself in `personParser` ? This might help:
+
+(>>=~) ::
+Parser a
+-> (a -> Parser b)
+-> Parser b
+(>>=~) p f =
+(p <* spaces1) >>= f
+
+infixl 1 >>=~
+
+// or maybe this
+
+(<*>~) ::
+Parser (a -> b)
+-> Parser a
+-> Parser b
+(<*>~) f a =
+f <*> spaces1 *> a
+
+infixl 4 <*>~
 
  */
 }
