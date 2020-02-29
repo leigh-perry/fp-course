@@ -145,6 +145,7 @@ object Parsing {
         UnexpectedChar(c)
     }
 
+  // a helper for writing tests
   def slist(s: String): Xlist[Char] =
     Xlist.fromList(s.toList)
 
@@ -408,14 +409,6 @@ object Parsing {
   //   assert(Result(Xlist('x'), 120) == parse(ageParser, slist("120x")))
   //   assert(UnexpectedChar('x') == parse(ageParser, slist("x120")))
   // }
-
-  // Result >< 120
-  //
-  // >>> isErrorResult (parse ageParser "abc")
-  // True
-  //
-  // >>> isErrorResult (parse ageParser "-120")
-  // True
   val ageParser: Parser[Int] =
     list1(digit).map {
       digits: Xlist[Char] =>
@@ -539,5 +532,4 @@ object Parsing {
     ) {
       Person
     }
-
 }
