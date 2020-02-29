@@ -69,6 +69,10 @@ object Xlist {
         .toList
     }
 
+  def stringOf(l: Xlist[Char]): String =
+    l.foldRight[List[Char]](_ :: _, Nil)
+      .mkString("")
+
   //// syntax
 
   implicit class XlistOps[A](val xl: Xlist[A]) extends AnyVal {
