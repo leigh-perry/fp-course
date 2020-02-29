@@ -54,6 +54,17 @@ object Xlist {
   def sequenceOptional[A](xl: Xlist[Option[A]]): Option[Xlist[A]] =
     ???
 
+  def replicate[A](n: Int, a: A): Xlist[A] =
+    fromList {
+      (1 to n)
+        .map(_ => a)
+        .toList
+    }
+
+  def stringOf(l: Xlist[Char]): String =
+    l.foldRight[List[Char]](_ :: _, Nil)
+      .mkString("")
+
   //// syntax
 
   implicit class XlistOps[A](val xl: Xlist[A]) extends AnyVal {

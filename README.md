@@ -54,3 +54,11 @@ run [the tests](./modules/fp-course/src/test/scala/com/leighperry/fp/base/Applic
 
 [COMING]
 
+### Foldable
+
+[COMING]
+
+### Traverse (aka Traversable)
+
+[COMING]
+

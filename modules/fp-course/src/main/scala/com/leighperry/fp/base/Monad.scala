@@ -72,3 +72,12 @@ object Monad {
         Applicative.instanceFunction1.map(fa)(f)
     }
 }
+
+////
+
+object MonadSyntax {
+  implicit class MonadOpsF[F[_]: Monad, A](fa: F[A]) {
+    def flatMap[B](f: A => F[B]): F[B] =
+      Monad[F].flatMap(fa)(f)
+  }
+}

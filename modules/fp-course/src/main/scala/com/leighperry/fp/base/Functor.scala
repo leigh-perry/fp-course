@@ -38,3 +38,12 @@ object Functor {
         ???
     }
 }
+
+////
+
+object FunctorSyntax {
+  implicit class FunctorOpsF[F[_]: Functor, A](fa: F[A]) {
+    def map[B](f: A => B): F[B] =
+      Functor[F].map(fa)(f)
+  }
+}
