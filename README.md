@@ -36,7 +36,8 @@ run [the tests](./modules/fp-course/src/test/scala/com/leighperry/fp/base/Applic
 
 ### Parser
 
-[COMING]
+- Implement [operations for Parsing](./modules/fp-course/src/main/scala/com/leighperry/fp/base/Parsing.scala)
+by replacing the `???` sections, and then running the commented-out `main` methods for each function.
 
 ## More standard typeclasses
 
